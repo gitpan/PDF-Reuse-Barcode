@@ -1,0 +1,6 @@
+Revision history for Perl extension PDF::Reuse::Barcode.
+
+0.01  Tue Jun  3 09:13:50 2003
+	- original version; created by h2xs 1.21 with options
+		-AXn PDF::Reuse::Barcode
+
