@@ -1,5 +1,8 @@
 Revision history for Perl extension PDF::Reuse::Barcode.
 
+0.03  Fri Nov 21 2003
+     Improved precision in the "formula" for rotation
+
 0.02  Tue June 10
      Added support for Code128 by using Barcode::Code128
 

@@ -1,4 +1,4 @@
-PDF/Reuse/Barcode version 0.02
+PDF/Reuse/Barcode version 0.03
 ==============================
 
 This is a sub-module to PDF::Reuse. It creates barcode "images" to be used in

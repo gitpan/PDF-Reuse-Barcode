@@ -5,7 +5,7 @@ use PDF::Reuse;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 my ($str, $xsize, $ysize, $height, $sPtn, @sizes, $length, $value, %default);
 
@@ -29,7 +29,6 @@ sub init
    @sizes  = ();
    $length = 0;
    $value  = '' 
-
 }
 
 
@@ -42,9 +41,9 @@ sub general1
    $str  = "q\n";
    $str .= "$xsize 0 0 $ysize $default{'x'} $default{'y'} cm\n";
    if ($default{'rotate'} != 0)
-   {   my $radian = $default{'rotate'} / 57.3;    # approx. 
-       my $Cos    = cos($radian);
-       my $Sin    = sin($radian);
+   {   my $radian = sprintf("%.6f", $default{'rotate'} / 57.296);    # approx. 
+       my $Cos    = sprintf("%.6f", cos($radian));
+       my $Sin    = sprintf("%.6f", sin($radian));
        my $negSin = $Sin * -1;
        $str .= "$Cos $Sin $negSin $Cos 0 0 cm\n";
    }
