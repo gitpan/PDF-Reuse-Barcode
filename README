@@ -1,13 +1,14 @@
-PDF/Reuse/Barcode version 0.01
+PDF/Reuse/Barcode version 0.02
 ==============================
 
 This is a sub-module to PDF::Reuse. It creates barcode "images" to be used in
 PDF documents. It uses GD::Barcode and its sub-modules: GD::Barcode::Code39,
 COOP2of5, EAN13 and so on to calculate the barcode pattern.
+If you want Code128-barcodes you need Barcode::Code128.
 Normally the barcodes are displayed on a white background and with the characters
 under the bars. You can rotate the "image", make it smaller or bigger, prolong the
 bars and change the background.
-(But then, don't forget to test that your reader still understands it.)
+(But then, don't forget to test that your scanner still understands it.)
 
 
 INSTALLATION
@@ -36,7 +37,7 @@ DEPENDENCIES
 This module requires these other modules:
 
    PDF::Reuse
-   GD::Barcode
+   GD::Barcode   
    GD::Barcode::Code39
    GD::Barcode::COOP2of5
    GD::Barcode::EAN13
@@ -48,7 +49,7 @@ This module requires these other modules:
    GD::Barcode::NW7
    GD::Barcode::UPCA
    GD::Barcode::UPCE
-
+   Barcode::Code128
 
 COPYRIGHT AND LICENCE
 

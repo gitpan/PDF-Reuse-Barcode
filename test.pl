@@ -1,5 +1,5 @@
 use Test;
-BEGIN { plan tests => 14 };
+BEGIN { plan tests => 15 };
 use PDF::Reuse;
 ok(1);
 use GD::Barcode;
@@ -15,6 +15,7 @@ ok(find('GD::Barcode::Matrix2of5'));
 ok(find('GD::Barcode::NW7'));
 ok(find('GD::Barcode::UPCA'));
 ok(find('GD::Barcode::UPCE'));
+ok(find('Barcode::Code128'));
 use PDF::Reuse::Barcode;
 ok(14);
 

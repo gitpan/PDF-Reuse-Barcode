@@ -5,7 +5,7 @@ use PDF::Reuse;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 my ($str, $xsize, $ysize, $height, $sPtn, @sizes, $length, $value, %default);
 
@@ -114,6 +114,38 @@ sub standardEnd
 
 
 }
+
+sub Code128
+{  eval 'require Barcode::Code128';
+   init();
+   my %param = @_;
+   for (keys %param)
+    {   my $lc = lc($_); 
+        if (exists $default{$lc})
+        {  $default{$lc} = $param{$_}; 
+        }
+        else
+        {  print STDERR "Unknown parameter $_ , not used \n";
+        }
+    }
+     $value = $default{'value'};
+
+   general1();
+
+   my $oGDBar = Barcode::Code128->new();
+   if (! $oGDBar)
+   {  die "The translation of $value to barcodes didn't succeed, aborts\n";
+   }
+   else
+   {  
+      $sPtn = $oGDBar->barcode($value);
+      $sPtn =~ tr/#/1/;
+      $sPtn =~ tr/ /0/;
+   }
+   standardEnd();
+   1;
+}
+
 
 sub Code39
 {  eval 'require GD::Barcode::Code39';
@@ -539,7 +571,7 @@ __END__
 
 =head1 NAME
 
-PDF::Reuse::Barcode - Create barcodes for PDF documents with PDF::Reuse and GD::Barcode
+PDF::Reuse::Barcode - Create barcodes for PDF documents with PDF::Reuse
 
 =head1 SYNOPSIS
 
@@ -560,11 +592,13 @@ PDF::Reuse::Barcode - Create barcodes for PDF documents with PDF::Reuse and GD::
 
 This is a sub-module to PDF::Reuse. It creates barcode "images" to be used in
 PDF documents. It uses GD::Barcode and its sub-modules: GD::Barcode::Code39,
-COOP2of5, EAN13 and so on, to calculate the barcode pattern.
+COOP2of5, EAN13 and so on, to calculate the barcode pattern. For Code128 it uses
+Barcode::Code128.
+
 Normally the barcodes are displayed on a white background and with the characters
 under the bars. You can rotate the "image", make it smaller or bigger, prolong the
 bars and change the background.
-(But then, don't forget to test that your barcode reader still understands it.)
+(But then, don't forget to test that your barcode scanner still understands it.)
 
 If you don't change the size of the "image", the bars are approximately 24 pixels
 high (the guard bars a few pixels longer) and the box/background is 38 pixels high
@@ -576,6 +610,51 @@ and something like 20 pixels wider than the barcodes. The text under the bars ar
 All functions are called in a similar way. Just replace 'ITF' in the example
 under SYNOPSIS with some other function name and let the value parameter follow
 the rules of that function.
+
+=head2 Code128
+
+Creates Code128 barcodes with the help of Barcode::Code128. Look at that module
+for further information.
+
+  # code128.pl
+   
+  use PDF::Reuse;
+  use PDF::Reuse::Barcode;
+  prFile('code128.pdf');
+  PDF::Reuse::Barcode::Code128(x     => 100,
+                               y     => 730,
+                               value => '00000123455555555558');
+  prEnd();
+
+
+The constants CodeA, FNC1, SHIFT and so on, are not imported, but if you really
+need them (??), try to use the character values instead.
+
+  CodeA      0xf4        CodeB      0xf5         CodeC      0xf6
+  FNC1       0xf7        FNC2       0xf8         FNC3       0xf9
+  FNC4       0xfa        Shift      0xfb         StartA     0xfc
+  StartB     0xfd        StartC     0xfe         Stop       0xff
+
+  # unusual.pl
+  
+  # Instead of FCN1
+
+  use PDF::Reuse;
+  use PDF::Reuse::Barcode;
+  prFile('unusual.pdf');
+  PDF::Reuse::Barcode::Code128(x     => 100,
+                               y     => 430,
+                               value => chr(0xf7) . '00000123455555555558',
+                               text  => 0 );
+
+   # Font and font size has to be chosen
+   # Text could be put manually at x => 110 
+   #                               y => 431
+   # The size, xSize, ySize and rotation doesn't influence the text
+   # in this case ...
+
+  prEnd();
+
 
 =head2 Code39
 
@@ -790,6 +869,7 @@ the bars longer with the help of xSize.)
 
 These modules are used for calculation of the barcode pattern
 
+   Barcode::Code128
    GD::Barcode
    GD::Barcode::Code39
    GD::Barcode::COOP2of5
@@ -802,7 +882,6 @@ These modules are used for calculation of the barcode pattern
    GD::Barcode::NW7
    GD::Barcode::UPCA
    GD::Barcode::UPCE
-
 
 =head1 AUTHOR
 
