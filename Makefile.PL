@@ -18,6 +18,5 @@ WriteMakefile(
                              GD::Barcode::UPCE           => 0,
                              Barcode::Code128            => 0},
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM => 'Barcode.pm', 
-       AUTHOR     => 'Lars Lundberg elkelund@worldonline.se') : ()),
+      (AUTHOR     => 'Lars Lundberg elkelund@worldonline.se') : ()),
 );

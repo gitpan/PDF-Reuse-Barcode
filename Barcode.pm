@@ -5,7 +5,7 @@ use PDF::Reuse;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 my ($str, $xsize, $ysize, $height, $sPtn, @sizes, $length, $value, %default);
 
@@ -20,7 +20,8 @@ sub init
                   background      => '1 1 1',
                   drawbackground  => 1,
                   text            => 'yes',
-                  prolong         => 0);
+                  prolong         => 0,
+                  hide_asterisk   => 0);
    $str    = '';
    $xsize  = 1;
    $ysize  = 1;
@@ -41,7 +42,7 @@ sub general1
    $str  = "q\n";
    $str .= "$xsize 0 0 $ysize $default{'x'} $default{'y'} cm\n";
    if ($default{'rotate'} != 0)
-   {   my $radian = sprintf("%.6f", $default{'rotate'} / 57.296);    # approx. 
+   {   my $radian = sprintf("%.6f", $default{'rotate'} / 57.2957795);    # approx. 
        my $Cos    = sprintf("%.6f", cos($radian));
        my $Sin    = sprintf("%.6f", sin($radian));
        my $negSin = $Sin * -1;
@@ -169,6 +170,10 @@ sub Code39
    }
    else
    {  $sPtn = $oGDBar->barcode();
+   }
+   if ($default{hide_asterisk})
+   {  $value =~ s/^\*//;
+      $value =~ s/\*$//;
    }
    standardEnd();
    1;
@@ -658,7 +663,16 @@ need them (??), try to use the character values instead.
 =head2 Code39
 
 Translates the characters 0-9, A-Z, '-', '*', '+', '$', '%', '/', '.' and ' '
-to a barcode pattern
+to a barcode pattern. 
+
+In Code39, the asterisk is used as the start and stop bar, but PDF::Reuse::Barcode 
+expects you to supply the asterisks. If you do not want them to display in the
+text version, pass the option "hide_asterisk" as in 
+
+    PDF::Reuse::Barcode::Code39 (x             => 10,
+                                 y             => 20,
+                                 value         => '*62002*',
+                                 hide_asterisk => 1);
 
 =head2 COOP2of5
 
@@ -823,10 +837,11 @@ A degree to rotate the barcode image counter-clockwise
   # With the box in a light color
   ################################
 
-  PDF::Reuse::Barcode::Code39 (x          => 70,
-                               y          => 300,
-                               value      => 'THIS IS SOMETHING',
-                               background => '0.99 0.97 0.97');
+  PDF::Reuse::Barcode::Code39 (x             => 70,
+                               y             => 300,
+                               value         => '*THIS IS SOMETHING*',
+                               background    => '0.99 0.97 0.97',
+                               hide_asterisk => 1);
 
   #############################################
   # With everything expanded along the x-axis
@@ -888,7 +903,7 @@ Lars Lundberg, elkelund@worldonline.se
 
 =head1 COPYRIGHT
 
-Copyright (C) 2003 Lars Lundberg, Solidez HB. All rights reserved.
+Copyright (C) 2003 - 2004 Lars Lundberg, Solidez HB. All rights reserved.
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
