@@ -1,5 +1,9 @@
 Revision history for Perl extension PDF::Reuse::Barcode.
 
+0.05 Wed Jan 21 2004
+     Added "mode" parameter for purely "graphic" bars. 
+     Credits to Martin Langhoff for this.
+
 0.04 Thu Jan 15 2004
      Added the new parameter 'hide_asterisk' for Code39. 
      Credits to Martin Langhoff for this.

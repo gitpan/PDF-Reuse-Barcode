@@ -1,4 +1,4 @@
-PDF/Reuse/Barcode version 0.04
+PDF/Reuse/Barcode version 0.05
 ==============================
 
 This is a sub-module to PDF::Reuse. It creates barcode "images" to be used in
@@ -53,7 +53,7 @@ This module requires these other modules:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2003 Lars Lundberg, Solidez HB
+Copyright (C) 2003 - 2004 Lars Lundberg, Solidez HB
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
