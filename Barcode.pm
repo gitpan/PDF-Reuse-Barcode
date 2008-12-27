@@ -5,7 +5,7 @@ use PDF::Reuse;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 my ($str, $xsize, $ysize, $height, $sPtn, @sizes, $length, $value, %default);
 
@@ -22,7 +22,7 @@ sub init
                   text            => 'yes',
                   prolong         => 0,
                   hide_asterisk   => 0,
-                  mode            => 'Type3');
+                  mode            => 'graphic');
    $str    = '';
    $xsize  = 1;
    $ysize  = 1;
@@ -71,13 +71,8 @@ sub general2
     
    @sizes = prFontSize(12);
 
-   if ($default{'mode'} eq 'Type3')
-   {  prBar( 10, $step, $sPtn);
-   } 
-   else  # graphic mode 
-   {  $str = Bar( 10, $step, $sPtn);
-   }
-
+   $str = Bar( 10, $step, $sPtn);
+   
    $prolong--;
    
    if ($prolong > 0)
@@ -91,19 +86,11 @@ sub general2
           {   $step += (12 * $prolong);
               $prolong = 0;
           }
-          if ($default{'mode'} eq 'Type3')
-          {  prBar( 10, $step, $sPtn);
-          } 
-          else   # graphic mode
-          {  $str .= Bar( 10, $step, $sPtn);
-          }
+          $str .= Bar( 10, $step, $sPtn);
        }
     }
-    # print the graphic mode bars
-    if ($default{'mode'} ne 'Type3')
-    {   $str .= "B\n";    
-        prAdd($str);
-    }  
+    $str .= "B\n";    
+    prAdd($str); 
 
 }
 
@@ -142,7 +129,7 @@ sub Bar
        elsif($_ eq 'G')
        {  $string .= "$x $yEnd m\n $x $yG l\n";
        }  
-       $x += 0.91;
+       $x = sprintf("%.2f", $x + 0.91);
    }
    return $string;
 }
@@ -641,10 +628,6 @@ high (the guard bars a few pixels longer) and the box/background is 38 pixels hi
 and something like 20 pixels wider than the barcodes. The text under the bars are
 10 pixels high.
 
-The barcodes are generated using a Type3 font by default. Ghostscript and xpdf 
-don'thave support for Type3 fonts. If you want to target engines that don't 
-handle Type3 fonts properly, see the "mode" parameter. 
-
 =head1 FUNCTIONS
 
 All functions are called in a similar way. Just replace 'ITF' in the example
@@ -823,16 +806,6 @@ Choose another RGB-combination if you want another color.
 
 A degree to rotate the barcode image counter-clockwise
 
-=head2 mode
-
-Defaults to 'Type3', which means that a Type3 font will be embedded in the PDF
-document and then used to print the barcodes. Type3 fonts are not supported by
-some PDF interpreters, namely Ghostscript and xpdf. 
-
-Set the mode to 'graphic' (currently, any string that doesn't match 'Type3' will
-do, but you should not count on this) to get graphic bars that work on all 
-engines.
-
 =head1 EXAMPLE
 
   use PDF::Reuse;
@@ -870,16 +843,7 @@ engines.
                               value   => '012345678901',
                               size    => 1.5);
 
-  ####################################################################
-  # "Graphic" barcodes. (The others on this page use a special font)
-  ####################################################################
-
-  PDF::Reuse::Barcode::EAN13 (x       => 250,
-                              y       => 600,
-                              value   => '012345678901',
-                              size    => 1.5,
-                              mode    => 'graphic');
-
+  
   ######################################################
   # A barcode image magnified a little along the y-axis
   ######################################################
@@ -955,7 +919,7 @@ These modules are used for calculation of the barcode pattern
 
 =head1 AUTHOR
 
-Lars Lundberg, elkelund@worldonline.se
+Lars Lundberg, larslund@cpan.org
 
 =head1 THANKS TO
 
@@ -965,7 +929,7 @@ modules for calculating the barcode patterns.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2003 - 2004 Lars Lundberg, Solidez HB. All rights reserved.
+Copyright (C) 2003 - 2008 Lars Lundberg, Solidez HB. All rights reserved.
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 

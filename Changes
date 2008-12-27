@@ -1,5 +1,9 @@
 Revision history for Perl extension PDF::Reuse::Barcode.
 
+0.06 Sat Dec 27 2009
+     As Acrobat 9 seems not handle Type 3 fonts correctly, only
+     "graphic" bars are produced. The mode parameter is ignored.
+
 0.05 Wed Jan 21 2004
      Added "mode" parameter for purely "graphic" bars. 
      Credits to Martin Langhoff for this.
