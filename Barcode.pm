@@ -5,9 +5,10 @@ use PDF::Reuse;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 my ($str, $xsize, $ysize, $height, $sPtn, @sizes, $length, $value, %default);
+my $qrcode = 0;
 
 sub init
 {  %default   = ( value           => '0000000',
@@ -18,10 +19,15 @@ sub init
                   ysize           => 1,
                   rotate          => 0,
                   background      => '1 1 1',
+                  graybackground  => 1,
                   drawbackground  => 1,
                   text            => 'yes',
                   prolong         => 0,
                   hide_asterisk   => 0,
+                  modulesize      => 1,
+                  qr_ecc          => 'M',
+                  qr_version      => 1,
+                  qr_padding      => 0,
                   mode            => 'graphic');
    $str    = '';
    $xsize  = 1;
@@ -30,7 +36,7 @@ sub init
    $sPtn   = '';
    @sizes  = ();
    $length = 0;
-   $value  = '' 
+   $value  = ''
 }
 
 
@@ -43,7 +49,7 @@ sub general1
    $str  = "q\n";
    $str .= "$xsize 0 0 $ysize $default{'x'} $default{'y'} cm\n";
    if ($default{'rotate'} != 0)
-   {   my $radian = sprintf("%.6f", $default{'rotate'} / 57.2957795);    # approx. 
+   {   my $radian = sprintf("%.6f", $default{'rotate'} / 57.2957795);    # approx.
        my $Cos    = sprintf("%.6f", cos($radian));
        my $Sin    = sprintf("%.6f", sin($radian));
        my $negSin = $Sin * -1;
@@ -52,29 +58,49 @@ sub general1
 }
 
 sub general2
-{  $length     = 20 + (length($sPtn) * 0.9);
+{  if ($qrcode)
+   {  my $m      = $default{'modulesize'};
+      my @rows   = split(/\n/, $sPtn);
+      $length = length($rows[0]) * $m;
+      $height = (1 + scalar(@rows)) * $m;
+      my $step   = 1;
+
+      if ($default{'drawbackground'})
+      {   $str .= "$default{'graybackground'} g\n";
+         $str .= "0 0 $length $height re\n";
+         $str .= 'f*' . "\n";
+         $str .= "0 g\n";
+      }
+      prAdd($str);
+
+      @sizes = prFontSize(12);
+
+      $str = Qr( 0, $step, $sPtn);
+   }
+   else
+   {  $length     = 20 + (length($sPtn) * 0.9);
    my $height  = 38;
    my $step    = 9;
    my $prolong = 0;
    if ($default{'prolong'} > 1)
    {  $prolong  = $default{'prolong'};
-      $height  = 26 + ($prolong * 12); 
+      $height  = 26 + ($prolong * 12);
    }
    if ($default{'drawbackground'})
    {   $str .= "$default{'background'} rg\n";
-       $str .= "0 0 $length $height re\n";  
+       $str .= "0 0 $length $height re\n";
        $str .= 'f*' . "\n";
        $str .= "0 0 0 rg\n";
    }
 
    prAdd($str);
-    
+
    @sizes = prFontSize(12);
 
    $str = Bar( 10, $step, $sPtn);
-   
+
    $prolong--;
-   
+
    if ($prolong > 0)
    {   $sPtn =~ s/G/1/go;
        while ($prolong > 0)
@@ -89,10 +115,13 @@ sub general2
           $str .= Bar( 10, $step, $sPtn);
        }
     }
-    $str .= "B\n";    
-    prAdd($str); 
+   }
+
+    $str .= "B\n";
+    prAdd($str);
 
 }
+
 
 sub general3
 {  $str = "Q\n";
@@ -108,11 +137,17 @@ sub standardEnd
        prFontSize(10);
        my $textLength = length($value) * 6;
        my $start = ($length - $textLength) / 2;
+       if ($qrcode) {
+          my $quiet = sprintf("%.2f", 4 * $default{'modulesize'});
+          prText($start, 0-$quiet, $value);
+       }
+       else {
        prText($start, 1.5, $value);
+       }
        prFont($vec[3]);
     }
    general3();
-   
+
    1;
 }
 
@@ -128,8 +163,34 @@ sub Bar
        }
        elsif($_ eq 'G')
        {  $string .= "$x $yEnd m\n $x $yG l\n";
-       }  
+       }
        $x = sprintf("%.2f", $x + 0.91);
+   }
+   return $string;
+}
+
+
+sub Qr
+{  my ($x, $y, $pattern) = @_;
+   my $xStart = sprintf("%.2f", $x);
+
+   my $m = $default{'modulesize'};
+   my $s = $default{'qr_padding'};
+   my $space = sprintf('%.2f', $m + $s);#
+
+   my $string = "0.01 w\n 0 G\n";
+   my @rows = split(/\n/, $pattern);
+   for my $row (reverse @rows) {
+       my $yEnd = sprintf("%.2f", $y + $m);
+       for (split(//, $row))
+       {   my $xEnd = sprintf("%.2f", $x + $m);
+           if ($_ eq '1')
+           {  $string .= "$x $y $m $m re\nf\n";
+           }
+           $x = sprintf("%.2f", $x + $space);
+       }
+       $x = $xStart;
+       $y = sprintf("%.2f", $y + $space);
    }
    return $string;
 }
@@ -139,9 +200,9 @@ sub Code128
    init();
    my %param = @_;
    for (keys %param)
-    {   my $lc = lc($_); 
+    {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -156,7 +217,7 @@ sub Code128
    {  die "The translation of $value to barcodes didn't succeed, aborts\n";
    }
    else
-   {  
+   {
       $sPtn = $oGDBar->barcode($value);
       $sPtn =~ tr/#/1/;
       $sPtn =~ tr/ /0/;
@@ -171,9 +232,9 @@ sub Code39
    init();
    my %param = @_;
    for (keys %param)
-    {   my $lc = lc($_); 
+    {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -203,9 +264,9 @@ sub COOP2of5
    init();
    my %param = @_;
    for (keys %param)
-    {   my $lc = lc($_); 
+    {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -232,9 +293,9 @@ sub IATA2of5
    init();
    my %param = @_;
    for (keys %param)
-    {   my $lc = lc($_); 
+    {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -262,9 +323,9 @@ sub Industrial2of5
    init();
    my %param = @_;
    for (keys %param)
-    {   my $lc = lc($_); 
+    {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -291,9 +352,9 @@ sub Matrix2of5
    init();
    my %param = @_;
    for (keys %param)
-    {   my $lc = lc($_); 
+    {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -320,9 +381,9 @@ sub NW7
    init();
    my %param = @_;
    for (keys %param)
-    {   my $lc = lc($_); 
+    {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -351,9 +412,9 @@ sub EAN13
    init();
    my %param = @_;
    for (keys %param)
-   {   my $lc = lc($_); 
+   {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -387,7 +448,7 @@ sub EAN13
         my @vec = prFont('C');
 
         prFontSize(10);
-   
+
         prText(1, 2, $siffra);
         prText(14, 2, $del1);
         prText(56, 2, $del2);
@@ -403,9 +464,9 @@ sub EAN8
    init();
    my %param = @_;
    for (keys %param)
-   {   my $lc = lc($_); 
+   {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -449,9 +510,9 @@ sub ITF
    init();
    my %param = @_;
    for (keys %param)
-    {   my $lc = lc($_); 
+    {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -478,9 +539,9 @@ sub UPCA
    init();
    my %param = @_;
    for (keys %param)
-   {   my $lc = lc($_); 
+   {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -515,7 +576,7 @@ sub UPCA
        my @vec = prFont('C');
 
        prFontSize(10);
-   
+
        prText(2, 2, $siffra1);
        prText(20, 2, $del1);
        prText(56, 2, $del2);
@@ -532,9 +593,9 @@ sub UPCE
    init();
    my %param = @_;
    for (keys %param)
-   {   my $lc = lc($_); 
+   {   my $lc = lc($_);
         if (exists $default{$lc})
-        {  $default{$lc} = $param{$_}; 
+        {  $default{$lc} = $param{$_};
         }
         else
         {  print STDERR "Unknown parameter $_ , not used \n";
@@ -551,7 +612,7 @@ sub UPCE
     if (length($value) == 6)
    {  $value  = '0' . $value;
       my $cd  = GD::Barcode::UPCE::calcUPCECD($value);
-      $value .= $cd; 
+      $value .= $cd;
    }
    elsif (length($value) == 7)
    {  my $cd  = GD::Barcode::UPCE::calcUPCECD($value);
@@ -574,7 +635,7 @@ sub UPCE
        my @vec = prFont('C');
 
        prFontSize(10);
-   
+
        prText(2, 2, $siffra);
        prText(14, 2, $del1);
        prText(58, 2, $del2);
@@ -583,6 +644,35 @@ sub UPCE
     }
     general3;
     1;
+}
+
+sub QRcode
+{  eval 'require GD::Barcode::QRcode';
+   $qrcode = 1;
+   init();
+   my %param = @_;
+   for (keys %param)
+    {   my $lc = lc($_);
+        if (exists $default{$lc})
+        {  $default{$lc} = $param{$_};
+        }
+        else
+        {  print STDERR "Unknown parameter $_ , not used \n";
+        }
+    }
+     $value = $default{'value'};
+
+    general1();
+
+   my $oGDBar = GD::Barcode::QRcode->new($value, {Ecc => $default{'qr_ecc'}, Version=>$default{'qr_version'}, ModuleSize => $default{'size'}});
+   if (! $oGDBar)
+   {  die "$GD::Barcode::QRcode::errStr\n";
+   }
+   else
+   {  $sPtn = $oGDBar->barcode();
+   }
+   standardEnd();
+   1;
 }
 
 
@@ -603,12 +693,12 @@ PDF::Reuse::Barcode - Create barcodes for PDF documents with PDF::Reuse
    use strict;
 
    prFile('bars.pdf');
-     
+
    PDF::Reuse::Barcode::ITF (x       => 70,
                              y       => 530,
                              value   => '0123456789',
                              prolong => 2.96);
-               
+
    prEnd();
 
 =head1 DESCRIPTION
@@ -640,7 +730,7 @@ Creates Code128 barcodes with the help of Barcode::Code128. Look at that module
 for further information.
 
   # code128.pl
-   
+
   use PDF::Reuse;
   use PDF::Reuse::Barcode;
   prFile('code128.pdf');
@@ -659,7 +749,7 @@ need them (??), try to use the character values instead.
   StartB     0xfd        StartC     0xfe         Stop       0xff
 
   # unusual.pl
-  
+
   # Instead of FCN1
 
   use PDF::Reuse;
@@ -671,7 +761,7 @@ need them (??), try to use the character values instead.
                                text  => 0 );
 
    # Font and font size has to be chosen
-   # Text could be put manually at x => 110 
+   # Text could be put manually at x => 110
    #                               y => 431
    # The size, xSize, ySize and rotation doesn't influence the text
    # in this case ...
@@ -682,11 +772,11 @@ need them (??), try to use the character values instead.
 =head2 Code39
 
 Translates the characters 0-9, A-Z, '-', '*', '+', '$', '%', '/', '.' and ' '
-to a barcode pattern. 
+to a barcode pattern.
 
-In Code39, the asterisk is used as the start and stop bar, but PDF::Reuse::Barcode 
+In Code39, the asterisk is used as the start and stop bar, but PDF::Reuse::Barcode
 expects you to supply the asterisks. If you do not want them to display in the
-text version, pass the option "hide_asterisk" as in 
+text version, pass the option "hide_asterisk" as in
 
     PDF::Reuse::Barcode::Code39 (x             => 10,
                                  y             => 20,
@@ -699,8 +789,8 @@ Creates COOP2of5 barcodes from a string consisting of the numeric characters 0-9
 
 =head2 EAN13
 
-Creates EAN13 barcodes from a string of 12 or 13 digits. 
-The check number (the 13:th digit) is calculated if not supplied. 
+Creates EAN13 barcodes from a string of 12 or 13 digits.
+The check number (the 13:th digit) is calculated if not supplied.
 If there is given check number it is not controlled.
 
 =head2 EAN8
@@ -730,10 +820,15 @@ Creates Matrix2of5 barcodes from a string consisting of the numeric characters 0
 
 Creates a NW7 barcodes from a string consisting of the numeric characters 0-9
 
+=head2 QRcode
+
+Creates QRcodes from numeric, alphanumeric, binary or Kanji data (or a
+mixture of these).
+
 =head2 UPCA
 
-Translates a string of 11 or 12 digits to UPCA barcodes. The check number (the 12:th 
-digit) is calculated if not supplied. If there is given check number it is not 
+Translates a string of 11 or 12 digits to UPCA barcodes. The check number (the 12:th
+digit) is calculated if not supplied. If there is given check number it is not
 controlled.
 
 =head2 UPCE
@@ -744,22 +839,22 @@ calculated if not supplied. If there is given check number it is not controlled.
 
 =head1 COMMON PARAMETERS
 
-All functions accepts these parameters. 
-The parameters should be put in a hash.  
-All of them are optional, except 'value'. 
+All functions accepts these parameters.
+The parameters should be put in a hash.
+All of them are optional, except 'value'.
 
 =head2 value
 
-A string of characters which will be translated to barcodes. 
+A string of characters which will be translated to barcodes.
 
 =head2 x
 
-Number of pixels along the x-axis where to put the lower left "corner" of the 
+Number of pixels along the x-axis where to put the lower left "corner" of the
 barcode image.
 
 =head2 y
 
-Number of pixels along the y-axis where to put the lower left "corner" of the 
+Number of pixels along the y-axis where to put the lower left "corner" of the
 barcode image.
 
 =head2 size
@@ -767,6 +862,9 @@ barcode image.
 A (decimal) number. If you define a number for this parameter, all sizes along
 the x- and y-axes will multiplied by this number. Also the text under the bars
 will be scaled.
+
+For QRcodes, the square of this number determines the number of 'modulesize'
+rectangles used to represent a single module (so 1=1, 2=4, 3=9, etc).
 
 =head2 xSize
 
@@ -791,20 +889,57 @@ pattern.
 Normally this parameter is 'yes', which will cause the digits to be written as
 text under the barcodes. If this parameter is '' or 0, the text will be suppressed.
 
-=head2 drawBackground
+=head2 drawbackground
 
 By default this parameter is 1, which will cause the barcodes to be drawn on
 a prepared background. If this parameter is '' or 0, the current background
 will be used, and the module will not try change it.
+
+For QRcodes, this will use the 'graybackground' color to draw a rectangle
+including the "quiet zone" around the QRcode.
 
 =head2 background
 
 Normally it is '1 1 1', which will draw a white background/box around the barcodes.
 Choose another RGB-combination if you want another color.
 
+For QRcodes, see 'graybackground'.
+
 =head2 rotate
 
 A degree to rotate the barcode image counter-clockwise
+
+=head1 QRCODE SPECIFIC PARAMETERS
+
+When generating QRcodes, some of the common parameters are ignored
+and some QRcode specific parameters are available for modifying
+features of the QRcode.  QRcodes are generated with a Gray colorspace.
+
+=head2 graybackground
+
+Normally it is 1, which will draw a white background/box around the QRcodes.
+Choose another value between 0 and 1 (inclusive) to specify a different shade of
+gray for the background.
+
+=head2 modulesize
+
+Defaults to 1.  Sets the size in Postscript points of the rectangle drawn for
+a single rectangle when drawing a QRcode.
+
+=head2 qr_ecc
+
+Defaults to 'M'.  Sets the error correction mode for the QRcode and can be
+set to L (Low), M (Medium), Q (Quartile), or H (High).
+
+=head2 qr_version
+
+Defaults to 1.  Set to an integer value from 1 to 40 to select the size
+and data capacity of the QRcode.
+
+=head2 qr_padding
+
+Defaults to 0.  Sets an amount of padding to insert between modules in the
+QRcode (may be useful if prints do not scan well).
 
 =head1 EXAMPLE
 
@@ -827,9 +962,9 @@ A degree to rotate the barcode image counter-clockwise
   prAdd($str);
 
   #################################
-  # An image with prolonged bars, 
+  # An image with prolonged bars,
   #################################
-      
+
   PDF::Reuse::Barcode::ITF (x       => 50,
                             y       => 700,
                             value   => '0123456789',
@@ -843,7 +978,7 @@ A degree to rotate the barcode image counter-clockwise
                               value   => '012345678901',
                               size    => 1.5);
 
-  
+
   ######################################################
   # A barcode image magnified a little along the y-axis
   ######################################################
@@ -873,16 +1008,27 @@ A degree to rotate the barcode image counter-clockwise
                             xSize => 2);
 
   #################################################
-  # An image, 90 degrees rotated, might look 
+  # An image, 90 degrees rotated, might look
   # strange on the screen, should be ok as printed
   #################################################
 
   PDF::Reuse::Barcode::UPCA (x              => 400,
                              y              => 100,
                              value          => '12345678901',
-                             drawBackground => 0,
+                             drawbackground => 0,
                              rotate         => 90);
 
+  #################################################
+  # A QRcode with a 10% gray "quiet zone"
+  #################################################
+
+  PDF::Reuse::Barcode::QRcode (x              => 300,
+                               y              => 500,
+                               value          => 'http://example.org/',
+                               drawbackground => 1,
+                               graybackground => 0.9, # 10% gray
+                               qr_version     => 2,
+                               modulesize     => 2);
   prEnd();
 
 
@@ -894,10 +1040,10 @@ a little blurred at the lower ends when they are displayed on a screen. If you
 magnify the image, the lines are displayed correctly. When you print the image
 there shouldn't be any problem, if you use at least 600 dpi.
 
-Also rotated barcodes might look strange on a screen. Most often they are much 
+Also rotated barcodes might look strange on a screen. Most often they are much
 better as printed on paper. Try to use "size" rather than "prolong", when you have
 a rotated barcode "image". (If it has been rotated 90 or 270 degrees, you can make
-the bars longer with the help of xSize.)    
+the bars longer with the help of xSize.)
 
 =head1 SEE ALSO
 
@@ -914,12 +1060,14 @@ These modules are used for calculation of the barcode pattern
    GD::Barcode::ITF
    GD::Barcode::Matrix2of5
    GD::Barcode::NW7
+   GD::Barcode::QRcode
    GD::Barcode::UPCA
    GD::Barcode::UPCE
 
 =head1 AUTHOR
 
 Lars Lundberg, larslund@cpan.org
+Chris Nighswonger, cnighs@cpan.org
 
 =head1 THANKS TO
 
@@ -929,13 +1077,14 @@ modules for calculating the barcode patterns.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2003 - 2008 Lars Lundberg, Solidez HB. All rights reserved.
+Copyright (C) 2003 - 2009 Lars Lundberg, Solidez HB. All rights reserved.
+Copyright (C) 2010 - 2014 Chris Nighswonger
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =head1 DISCLAIMER
 
-You get this module free as it is, but nothing is guaranteed to work, whatever 
-implicitly or explicitly stated in this document, and everything you do, 
-you do at your own risk - I will not take responsibility 
+You get this module free as it is, but nothing is guaranteed to work, whatever
+implicitly or explicitly stated in this document, and everything you do,
+you do at your own risk - I will not take responsibility
 for any damage, loss of money and/or health that may arise from the use of this module!

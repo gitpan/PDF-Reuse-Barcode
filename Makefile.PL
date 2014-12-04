@@ -1,9 +1,9 @@
 use 5.006;
 use ExtUtils::MakeMaker;
 WriteMakefile(
-    'NAME'	       	=> 'PDF::Reuse::Barcode',
-    'VERSION_FROM'	=> 'Barcode.pm', 
-    'PREREQ_PM'		=> {    PDF::Reuse                  => 0,
+    'NAME'          => 'PDF::Reuse::Barcode',
+    'VERSION_FROM'  => 'Barcode.pm',
+    'PREREQ_PM'     => {     PDF::Reuse                  => 0,
                              GD::Barcode                 => 0,
                              GD::Barcode::Code39         => 0,
                              GD::Barcode::COOP2of5       => 0,
